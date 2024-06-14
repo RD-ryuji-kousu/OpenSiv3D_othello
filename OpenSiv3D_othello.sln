@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenSiv3D_otello", "OpenSiv3D_otello\OpenSiv3D_otello.vcxproj", "{0118D18B-397B-44C9-89F4-64A85BFE5635}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenSiv3D_othello", "OpenSiv3D_othello\OpenSiv3D_othello.vcxproj", "{0118D18B-397B-44C9-89F4-64A85BFE5635}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
