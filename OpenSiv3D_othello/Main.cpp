@@ -1,6 +1,10 @@
 ﻿# include "stdafx.h" // Siv3D v0.6.14
 
-
+/* @brief 石の色を設定
+* @param space 空白
+* @param black 黒
+* @param white 白
+ */
 enum class SquareState :unsigned char{
 	space, black, white
 };
@@ -13,7 +17,7 @@ inline SquareState next_color(SquareState c)
 {
 	return (c == SquareState::black) ? SquareState::white : SquareState::black;
 }
-
+//ゲームスタート処理
 class Start {
 public:
 	void View() {
@@ -26,7 +30,7 @@ private:
 	String second = U"Choose second move?\n Press 'S'";
 };
 
-
+//ゲームオーバー処理
 class Over {
 public:
 	void View(const String& text1, int stw, int stb) {
@@ -42,10 +46,11 @@ private:
 	String quit = U"Quit Press 'Q'";
 };
 
-
+//ボードの描画クラス
 class Board {
 public:
-	void Draw() {
+	//ボードの描画
+	const void Draw()const {
 		board.drawFrame(3.0);
 		board.stretched(-1).draw(Palette::Darkgreen);
 		for (int y = board.y + 70; y <= board.bottomY(); y += 70) {
@@ -55,6 +60,9 @@ public:
 			Line(Vec2(x, board.y), Vec2(x, board.bottomY())).draw(1.5);
 		}
 	}
+	/*ボードの情報
+	* @return ボードの情報
+	*/
 	const RectF& Get_board()const {
 		return board;
 	}
@@ -64,49 +72,76 @@ public:
 private:
 	RectF board = { Arg::center(400,300), 560};
 };
+//石一個の描画元情報クラス
 class Stone: public Circle {
 public:
 	Stone(const Circle& _stone, ColorF _c) :Circle(_stone), color(_c){}
 		ColorF color;
 };
+//石の位置情報クラス
 class Stonepos {
 public:
+	//コンストラクタ
 	Stonepos() {
+		//空白で初期化
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
 				board[y][x] = SquareState::space;
 			}
 		}
+		//石の初期配置
 		board[3][3] = SquareState::white;
 		board[4][4] = SquareState::white;
 		board[3][4] = SquareState::black;
 		board[4][3] = SquareState::black;
 	}
+	/*石の情報をもつ配列のオペレーター
+	* @param[in] インデックスy
+	* @return 配列boardのｙ番目の情報
+	*/
 	SquareState* operator[](int y){
 		return board[y];
 	}
 	const SquareState* operator[](int y)const {
 		return board[y];
 	}
+	/* 縦横斜めのcからみた相手の色dをチェック
+	* @param[in]	px	調査する石の基底座標X
+	* @param[in]	py	調査する石の基底座標Y
+	* @param[in]	dx	調査する方向の加減算値(-1~1)
+	* @param[in]	dy	調査する方向の加減算値(-1~1)
+	* @param[in]	c	調査する石の色
+	* @param[in]	d	相手の色
+	* @return	方向の調査終了時自分の色が見つかった時true,見つからず空白だった場合false
+	*/
 	bool IsSetDir(int px, int py, int dx, int dy, SquareState c, SquareState d) const{
 		int count = 0;
 		for (int y = py + dy, x = px + dx; y >= 0 && y < 8 && x >= 0 && x < 8; y += dy, x += dx) {
+			//相手の色ならカウントする
 			if (board[y][x] == d) {
 				count++;
 			}
+			//自分の色の時カウントが0なら終了、それ以外はtrueを返す
 			else if (board[y][x] == c) {
 				if (count == 0) break;
 				else return true;
 			}
+			//空白なら終了
 			else {
 				break;
 			}
 		}
 		return false;
 	}
+	/* 石が置けるかどうか
+	* @param[in] px 調査するX座標
+	* @param[in] py	調査するY座標
+	* @param[in] c	調査する石の色
+	* @return 石が置けるときtrueを返す、それ以外はfalse
+	*/
 	bool IsSet(int px, int py, SquareState c) const{
 		if (board[py][px] != SquareState::space)return false;
-		SquareState  d = (c == SquareState::black) ? SquareState::white : SquareState::black;
+		SquareState  d = next_color(c);
 		for (int dy = -1; dy <= 1; dy++) {
 			for (int dx = -1; dx <= 1; dx++) {
 				if (dx == 0 && dy == 0)continue;
@@ -115,8 +150,13 @@ public:
 		}
 		return false;
 	}
+	/*石を置いて情報をboardに登録
+	* @param[in] px	調査する座標X
+	* @param[in] py	調査する座標Y
+	* @param[in] c	調査する石の色
+	*/
 	void Set(int px, int py, SquareState c) {
-		SquareState  d = (c == SquareState::black) ? SquareState::white : SquareState::black;
+		SquareState  d = next_color(c);
 		board[py][px] = c;
 
 		for (int dy = -1; dy <= 1; dy++) {
@@ -124,17 +164,21 @@ public:
 				if (dx == 0 && dy == 0)continue;
 				if (IsSetDir(px, py, dx, dy, c, d) == true) {
 					for (int y = py + dy, x = px + dx; y >= 0 && y < 8 && x >= 0 && x < 8; y += dy, x += dx) {
-						if (board[y][x] == d) {
+						if (board[y][x] == d) {//石をひっくり返す
 							board[y][x] = c;
 						}
 						else {
-							break;
+							break;	//自分の色なら終了
 						}
 					}
 				}
 			}
 		}
 	}
+	/*石が置けないかどうか
+	* param[in]	c	調査する石の色
+	* @return 石が置けない時true それ以外はfalse
+	*/
 	bool PassChk(SquareState c)const {
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
@@ -145,7 +189,10 @@ public:
 		}
 		return true;
 	}
-	
+	/*石の数を数える
+	* @param[in]	c	調査する石の色
+	* @return	調査した石の数
+	*/
 	int CountStone(SquareState c)const {
 		int count = 0;
 		for (int y = 0; y < 8; y++) {
@@ -157,51 +204,68 @@ public:
 		}
 		return count;
 	}
+	/*勝敗判定
+	* @return 勝敗がつく要素があった場合true,それ以外はfalseを返す
+	*/
 	bool Issue()const {
-		if (CountStone(SquareState::black) == 0) {
+		if (CountStone(SquareState::black) == 0) {//黒が盤面にない
 			return true;
 		}
-		if (CountStone(SquareState::white) == 0) {
+		if (CountStone(SquareState::white) == 0) {//白が盤面にない
 			return true;
 		}
-		if (CountStone(SquareState::space) == 0) {
+		if (CountStone(SquareState::space) == 0) {//空白がない
 			return true;
 		}
-		if (PassChk(SquareState::white) == true && PassChk(SquareState::black) == true) {
+		if (PassChk(SquareState::white) == true && PassChk(SquareState::black) == true) {//両者石が置けない
 			return true;
 		}
 		return false;
 	}
+	/*勝者判定
+	* @param[in] 操作プレイヤー情報(0:黒, 1:白)
+	* @return 勝者に応じたテキスト
+	*/
 	String Winner(int pldata)const {
+		//黒が無くなった
 		if (CountStone(SquareState::black) == 0) {
 			if (pldata == 1)return U"You Win";
 			else return U"You Lose";
 		}
+		//白が無くなった
 		if (CountStone(SquareState::white) == 0) {
 			if (pldata == 0)return U"You Win";
 			else return U"You Lose";
 		}
+		//空白がない
 		if (CountStone(SquareState::space) == 0) {
+			//黒が多い
 			if (CountStone(SquareState::black) > CountStone(SquareState::white)) {
 				if (pldata == 0)return U"You Win";
 				else return U"You Lose";
 			}
+			//白が多い
 			else if (CountStone(SquareState::white) > CountStone(SquareState::black)) {
 				if (pldata == 1)return U"You Win";
 				else return U"You Lose";
 			}
+			//同数
 			else if (CountStone(SquareState::black) == CountStone(SquareState::white)) {
 				return U"Draw";
 			}
+			//両者共に石は置けない
 			if (PassChk(SquareState::white) == true && PassChk(SquareState::black) == true) {
+				//黒が多い
 				if (CountStone(SquareState::black) > CountStone(SquareState::white)) {
 					if (pldata == 0)return U"You Win";
 					else return U"You Lose";
 				}
+				//白が多い
 				else if (CountStone(SquareState::white) > CountStone(SquareState::black)) {
 					if (pldata == 1)return U"You Win";
 					else return U"You Lose";
 				}
+				//同数
 				else if (CountStone(SquareState::black) == CountStone(SquareState::white)) {
 					return U"Draw";
 				}
@@ -209,12 +273,15 @@ public:
 		}
 		return U"None";
 	}
+	//再初期化関数
 	void reset() {
+		//ボード情報の初期化
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
 				board[y][x] = SquareState::space;
 			}
 		}
+		//石の初期配置
 		board[3][3] = SquareState::white;
 		board[4][4] = SquareState::white;
 		board[3][4] = SquareState::black;
@@ -223,10 +290,13 @@ public:
 protected:
 	SquareState board[8][8];
 };
+//盤面の描画管理クラス
 class StoneMngr {
 public:
+	
 	StoneMngr(){
 	}
+	//盤面上の石の描画
 	void Draw(const Board& bd) const{
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
@@ -239,6 +309,7 @@ public:
 			}
 		}
 	}
+	//クリックされたポジション
 	const Point& MousePos()const {
 		return Cursor::Pos();
 	}
@@ -252,7 +323,12 @@ public:
 	bool PassChk(SquareState c)const {
 		return board.PassChk(c);
 	}
-	void SetandDraw(int px, int py, SquareState c, Board& desk) {
+	/*石の配置とひっくり返す描画
+	* @param[in] px 調査するX座標
+	* @param[in] py 調査するY座標
+	* @param[in] desk　ボードの情報
+	*/
+	void SetandDraw(int px, int py, SquareState c, const Board& desk) {
 		SquareState  d = (c == SquareState::black) ? SquareState::white : SquareState::black;
 		board[py][px] = c;
 		desk.Draw();
@@ -263,6 +339,7 @@ public:
 			for (int dx = -1; dx <= 1; dx++) {
 				if (dx == 0 && dy == 0)continue;
 				if (board.IsSetDir(px, py, dx, dy, c, d) == true) {
+					//石がひっくり返されるごとに描画
 					for (int y = py + dy, x = px + dx; y >= 0 && y < 8 && x >= 0 && x < 8; y += dy, x += dx) {
 						if (board[y][x] == d) {
 							board[y][x] = c;
@@ -279,7 +356,14 @@ public:
 			}
 		}
 	}
-	void Set(Board& bd, const Point& pos, SquareState c, int& turn, String& game_state) {
+	/*盤面に石を置く
+	* @param[in] bd ボードの情報
+	* @param[in] pos マウスポインターがクリックされた位置
+	* @param[in] c 石の色
+	* @param[out] turn 現在のターン数。正常に動作した場合インクリメントされる
+	* @param[out] game_state 現在の状況勝敗が決したときゲームオーバーに変更する
+	*/
+	void Set(const Board& bd, const Point& pos, SquareState c, int& turn, String& game_state) {
 		int x, y;
 		x = (pos.x - bd.Get_board().x) / 70;
 		y = (pos.y - bd.Get_board().y) / 70;
@@ -294,7 +378,7 @@ public:
 
 		}
 	}
-	bool Compute(SquareState c, int& turn, String& game_state, Board& desk);
+	bool Compute(SquareState c, int& turn, String& game_state, const Board& desk);
 	int Get_Stone(SquareState c) {
 		return board.CountStone(c);
 	}
@@ -468,13 +552,21 @@ void StoneComp::compute(int level, SquareState c, int& x, int& y)
 		y = it->py;
 	}
 }
-
-bool StoneMngr::Compute(SquareState c, int& turn, String& game_state, Board& desk) {
+/*コンピューターの動作関数
+* @param[in]	c	石の色
+* @param[out]	turn	現在のターン数。正常に動作した場合インクリメントする
+* @param[out]	game_state	現在の状態。勝敗が決まった場合ゲームオーバーに以降する
+* @param[in]	盤面の情報
+* @return	パスの時true、それ以外はfalse
+*/
+bool StoneMngr::Compute(SquareState c, int& turn, String& game_state, const Board& desk) {
 	StoneComp cpu(board);
 	int spaces = board.CountStone(SquareState::space);
 	SquareState d = (c != SquareState::white) ? SquareState::white : SquareState::black;
 	int x, y;
+	//空白が50以上または10未満の時6手先をみる、それ以外4手
 	cpu.compute((spaces > 50 || spaces < 10) ? 6 : 4, c, x, y);
+	//帰ってきたx,yに石を置く
 	if (x >= 0 && x < 8 && y >= 0 && y < 8) {
 		if (board.IsSet(x, y, c) == true) {
 			SetandDraw(x, y, c, desk);
@@ -515,6 +607,7 @@ void Main()
 	passt = U"PASS";
 	while (System::Update())
 	{
+		//スタート処理
 		if (Game_state == U"Start") {
 			gamebegin.View();
 			if (KeyF.pressed()) {
@@ -528,8 +621,10 @@ void Main()
 				Game_state = U"game";
 			}
 		}
+		//ゲーム処理
 		else if (Game_state == U"game") {
 			c = (turn % 2 == 0) ? SquareState::black : SquareState::white;
+			//プレイヤー処理
 			if (plside == turn % 2) {
 				side(U"Your turn").draw(0, 570);
 				if (stone.PassChk(c) == false) {
@@ -538,6 +633,7 @@ void Main()
 						side(U"CPU turn").draw(0, 570);
 					}
 				}
+				//パス処理および描画
 				else {
 					passbutton.draw(passbutton.leftClicked() ? Palette::Red : Palette::Lightgreen);
 					passtsiz(passt).draw(passbutton.center());
@@ -549,6 +645,7 @@ void Main()
 				}
 
 			}
+			//CPU処理
 			else {
 				System::Sleep(2s);
 				if (stone.Compute(cpuc, turn, Game_state, board) == true) {
@@ -561,6 +658,7 @@ void Main()
 			board.Draw();
 			stone.Draw(board);
 		}
+		//ゲームオーバー処理
 		else if (Game_state == U"Over") {
 			stopwatch.start();
 			if (stopwatch <= 3s) {
@@ -569,11 +667,13 @@ void Main()
 			}
 			else {
 				gameover.View(stone.Winner(plside), stone.Get_Stone(SquareState::white), stone.Get_Stone(SquareState::black));
+				//リセット処理
 				if (KeyR.pressed()) {
 					stone.reset();
 					turn = 0;
 					Game_state = U"Start";
 				}
+				//終了
 				if (KeyQ.pressed()) {
 					System::Exit();
 				}
